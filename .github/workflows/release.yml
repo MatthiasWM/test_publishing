@@ -21,7 +21,7 @@ on:
 # ${{ github.event.inputs.message }}
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
     - name: Create Draft Release
       id: create_release
