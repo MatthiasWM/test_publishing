@@ -1,7 +1,24 @@
+#
+# This script will tag the repo, compile and zip our software, and publish it as a GitHub Release
+#
+# see: https://github.com/marketplace/actions/publish-release
+#
+# Calling other workflows from this workflow:
+#  https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
+
 
 name: Matt is testing workflows
+#on:
+#  push:
 on:
-  push:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Release Version Tag'
+        required: true
+        default: '1.3.4b' 
+
+# ${{ github.event.inputs.message }}
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -12,8 +29,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: tag1
-        release_name: tag1name
+        # The repo will me tagged at this moment with 'tag'
+        tag_name: ${{ github.event.inputs.message }}
+        # Releases can be found under this name.
+        release_name: "Version ${{ github.event.inputs.message }}"
         draft: true
         prerelease: false
     - name: Get Sources
@@ -29,7 +48,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
+        # upload this file
         asset_path: ./spot.zip
+        # and give it that name in the destination
         asset_name: spot.zip
         asset_content_type: application/zip
     - uses: eregon/publish-release@v1
