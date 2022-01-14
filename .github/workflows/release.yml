@@ -30,9 +30,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         # The repo will me tagged at this moment with 'tag'
-        tag_name: ${{ github.event.inputs.message }}
+        tag_name: ${{ github.event.inputs.version_tag }}
         # Releases can be found under this name.
-        release_name: "Version ${{ github.event.inputs.message }}"
+        release_name: "Version ${{ github.event.inputs.version_tag }}"
         draft: true
         prerelease: false
     - name: Get Sources
