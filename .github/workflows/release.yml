@@ -16,12 +16,23 @@ on:
       version_tag:
         description: 'Release Version Tag'
         required: true
-        default: '1.3.4b' 
+        default: '1.3.4b'
+      build-for-macos:
+        type: boolean
+        description: Build macOS Universal Binary
+      build-for-windows:
+        type: boolean
+        description: Build Win64 Intel Binary
+      build-for-linux:
+        type: boolean
+        description: Build Linux Intel Binary
 
+# github.event.inputs.build-for-macos == 'true'
 # ${{ github.event.inputs.message }}
 jobs:
   release:
     runs-on: macos-latest
+    if: ${{ github.event.inputs.build-for-macos == 'true' }}
     steps:
     - name: Create Draft Release
       id: create_release
