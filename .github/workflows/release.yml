@@ -6,63 +6,218 @@
 # Calling other workflows from this workflow:
 #  https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
 
-
-name: Matt is testing workflows
-#on:
-#  push:
+name: 'Release Test'
 on:
   workflow_dispatch:
     inputs:
       version_tag:
         description: 'Release Version Tag'
         required: true
-        default: '1.3.4b'
-      build-for-macos:
+        default: '2022.4.15'
+        #default: `grep -o 'VERSION "[^"]*' CMakeLists.txt  | grep -o '[^"]*$'`
+#      create-release-page:
+#        type: boolean
+#        description: Create Release Page
+#        default: 'true'
+      build-macos:
         type: boolean
-        description: Build macOS Universal Binary
-      build-for-windows:
+        description: Build macOS Universal FLTK
+        default: 'true'
+      build-linux:
         type: boolean
-        description: Build Win64 Intel Binary
-      build-for-linux:
+        description: Build Linux i386 FLTK
+        default: 'true'
+      build-windows:
         type: boolean
-        description: Build Linux Intel Binary
+        description: Build Windows x64 FLTK
+        default: 'true'
 
-# github.event.inputs.build-for-macos == 'true'
-# ${{ github.event.inputs.message }}
 jobs:
-  release:
+
+#  create-release-page:
+#    runs-on: ubuntu-latest
+#    if: ${{ github.event.inputs.create-release-page == 'true' }}
+#    steps:
+#    - name: Create Release
+#      id: create_release
+#      uses: actions/create-release@v1
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      with:
+#        tag_name: ${{ github.event.inputs.version_tag }}
+#        release_name: "Version ${{ github.event.inputs.version_tag }}"
+#        draft: false
+#        prerelease: false
+#    - name: Publish Release
+#      uses: eregon/publish-release@v1
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      with:
+#        release_id: ${{ steps.create_release.outputs.id }}
+
+  build-macos:
     runs-on: macos-latest
-    if: ${{ github.event.inputs.build-for-macos == 'true' }}
+    if: ${{ github.event.inputs.build-macos == 'true' }}
     steps:
-    - name: Create Draft Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        # The repo will me tagged at this moment with 'tag'
-        tag_name: ${{ github.event.inputs.version_tag }}
-        # Releases can be found under this name.
-        release_name: "Version ${{ github.event.inputs.version_tag }}"
-        draft: true
-        prerelease: false
-    - name: Get Sources
+    - name: Get sources
       uses: actions/checkout@v2
-    - name: Compile FLTK
+    - name: Compile Einstein
       run: |
-        cmake -S . -B build
+        cmake -S . -B build \
+                      -D CMAKE_BUILD_TYPE=Release \
+                      -D "CMAKE_OSX_ARCHITECTURES=arm64;x86_64"
         cmake --build build
-        mv build/spot .
-        zip -9 spot.zip spot
+    - name: Pack Einstein
+      run: |
+        mv build/spot.app .
+        cmake -E tar cf spot_macos.zip --format=zip spot.app
     - uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        # upload this file
-        asset_path: ./spot.zip
-        # and give it that name in the destination
-        asset_name: spot.zip
+        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
+        asset_path: ./Einstein.zip
+        asset_name: Einstein_macOS_universal_fltk_${{github.event.inputs.version_tag}}.zip
+        asset_content_type: application/zip
+    - uses: ncipollo/release-action@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        allowUpdates: 'true'
+        artifacts: 'spot_macos.zip'
+        artifactContentType: application/zip
+        body: testing
+        tag: 'v${{ github.event.inputs.version_tag }}'
+
+  build-linux-i386-fltk:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build-linux-i386-fltk == 'true' }}
+    steps:
+    - name: Get dependencies
+      run: |
+        sudo apt-get install -y libpulse-dev ninja-build libbsd-dev
+        wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main'
+        sudo apt-get update
+        sudo apt-get install clang-format-13
+    - name: Get sources
+      uses: actions/checkout@v2
+    - name: Get FLTK
+      uses: actions/checkout@v2
+      with:
+        repository: fltk/fltk
+        path: fltk
+    - name: Get newt64
+      uses: actions/checkout@v2
+      with:
+        repository: MatthiasWM/NEWT64
+        path: newt64
+    - name: Compile FLTK
+      run: |
+        cmake -S fltk -B fltk/build \
+                      -D OPTION_USE_SYSTEM_LIBJPEG=Off \
+                      -D OPTION_USE_SYSTEM_ZLIB=Off \
+                      -D OPTION_USE_SYSTEM_LIBPNG=Off \
+                      -D FLTK_BUILD_TEST=Off \
+                      -D OPTION_USE_GL=Off \
+                      -D CMAKE_BUILD_TYPE=Release
+        cmake --build fltk/build
+    - name: Compile newt64
+      run: |
+        cmake -S newt64 -B newt64/build \
+                      -D CMAKE_BUILD_TYPE=Release
+        cmake --build newt64/build
+    - name: Compile Einstein
+      run: |
+        cmake -S . -B build \
+                      -D CMAKE_BUILD_TYPE=Release
+        cmake --build build --target Einstein
+    - name: Pack
+      run: |
+        mv build/Einstein .
+        cmake -E tar cf Einstein.zip --format=zip Einstein
+    - name: Upload
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
+        asset_path: ./Einstein.zip
+        asset_name: Einstein_linux_i386_fltk_${{github.event.inputs.version_tag}}.zip
+        asset_content_type: application/zip
+
+  build-windows-x64-fltk:
+    runs-on: windows-latest
+    if: ${{ github.event.inputs.build-windows-x64-fltk == 'true' }}
+    steps:
+    - name: Get sources
+      uses: actions/checkout@v2
+    - name: Get FLTK
+      uses: actions/checkout@v2
+      with:
+        repository: fltk/fltk
+        path: fltk
+    - name: Get newt64
+      uses: actions/checkout@v2
+      with:
+        repository: MatthiasWM/NEWT64
+        path: newt64
+    - name: Compile FLTK
+      run: |
+        cmake -G "Visual Studio 16 2019" -S fltk -B fltk/build -A x64 -D OPTION_USE_SYSTEM_LIBJPEG=Off -D OPTION_USE_SYSTEM_ZLIB=Off -D OPTION_USE_SYSTEM_LIBPNG=Off -D FLTK_BUILD_TEST=Off -D OPTION_USE_GL=Off
+        cmake --build fltk/build --config Release
+    - name: Compile newt64
+      run: |
+        cmake -G "Visual Studio 16 2019" -S newt64 -B newt64/build -A x64
+        cmake --build newt64/build --config Release
+    - name: Compile Einstein
+      run: |
+        cmake -G "Visual Studio 16 2019" -S . -B build -A x64
+        cmake --build build --config Release --target Einstein
+    - name: Pack Einstein
+      run: |
+        mv build/Release/Einstein.exe .
+        cmake -E tar cf Einstein.zip --format=zip Einstein.exe
+    - uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
+        asset_path: ./Einstein.zip
+        asset_name: Einstein_windows_x64_fltk_${{github.event.inputs.version_tag}}.zip
+        asset_content_type: application/zip
+    - uses: eregon/publish-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        release_id: ${{ steps.create_release.outputs.id }}
+
+  build-macos-universal-cocoa:
+    runs-on: macos-latest
+    if: ${{ github.event.inputs.build-macos-universal-cocoa == 'true' }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: |
+        xcodebuild archive \
+          -project _Build_/Xcode/Einstein.xcodeproj \
+          -scheme Einstein -configuration Release \
+          -archivePath Einstein.xcarchive \
+          ONLY_ACTIVE_ARCH=NO
+    - name: Pack Einstein
+      run: |
+        mv Einstein.xcarchive/Products/Applications/Einstein.app .
+        cmake -E tar cf Einstein.zip --format=zip Einstein.app
+        echo "https://github.com/"${{github.repository}}"/releases/tag/"${{github.event.inputs.version_tag}}
+    - uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        # https://github.com/MatthiasWM/Einstein/releases/tag/2022.4.15.4
+        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
+        asset_path: ./Einstein.zip
+        asset_name: Einstein_windows_x64_fltk_${{github.event.inputs.version_tag}}.zip
         asset_content_type: application/zip
     - uses: eregon/publish-release@v1
       env:
