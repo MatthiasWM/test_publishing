@@ -69,16 +69,8 @@ jobs:
         cmake --build build
     - name: Pack Einstein
       run: |
-        mv build/spot.app .
-        cmake -E tar cf spot_macos.zip --format=zip spot.app
-    - uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
-        asset_path: ./Einstein.zip
-        asset_name: Einstein_macOS_universal_fltk_${{github.event.inputs.version_tag}}.zip
-        asset_content_type: application/zip
+        mv build/spot .
+        cmake -E tar cf spot_macos.zip --format=zip spot
     - uses: ncipollo/release-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,6 +80,7 @@ jobs:
         artifactContentType: application/zip
         body: testing
         tag: 'v${{ github.event.inputs.version_tag }}'
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux-i386-fltk:
     runs-on: ubuntu-latest
