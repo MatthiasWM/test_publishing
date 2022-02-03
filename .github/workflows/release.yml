@@ -82,138 +82,54 @@ jobs:
         tag: 'v${{ github.event.inputs.version_tag }}'
         token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux-i386-fltk:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.build-linux-i386-fltk == 'true' }}
+  build-linux:
+    runs-on: macos-latest
+    if: ${{ github.event.inputs.build-linux == 'true' }}
     steps:
-    - name: Get dependencies
-      run: |
-        sudo apt-get install -y libpulse-dev ninja-build libbsd-dev
-        wget --no-check-certificate -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main'
-        sudo apt-get update
-        sudo apt-get install clang-format-13
     - name: Get sources
       uses: actions/checkout@v2
-    - name: Get FLTK
-      uses: actions/checkout@v2
-      with:
-        repository: fltk/fltk
-        path: fltk
-    - name: Get newt64
-      uses: actions/checkout@v2
-      with:
-        repository: MatthiasWM/NEWT64
-        path: newt64
-    - name: Compile FLTK
-      run: |
-        cmake -S fltk -B fltk/build \
-                      -D OPTION_USE_SYSTEM_LIBJPEG=Off \
-                      -D OPTION_USE_SYSTEM_ZLIB=Off \
-                      -D OPTION_USE_SYSTEM_LIBPNG=Off \
-                      -D FLTK_BUILD_TEST=Off \
-                      -D OPTION_USE_GL=Off \
-                      -D CMAKE_BUILD_TYPE=Release
-        cmake --build fltk/build
-    - name: Compile newt64
-      run: |
-        cmake -S newt64 -B newt64/build \
-                      -D CMAKE_BUILD_TYPE=Release
-        cmake --build newt64/build
     - name: Compile Einstein
       run: |
         cmake -S . -B build \
                       -D CMAKE_BUILD_TYPE=Release
-        cmake --build build --target Einstein
-    - name: Pack
+        cmake --build build
+    - name: Pack Einstein
       run: |
-        mv build/Einstein .
-        cmake -E tar cf Einstein.zip --format=zip Einstein
-    - name: Upload
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1.0.1
+        mv build/spot .
+        cmake -E tar cf spot_linux.zip --format=zip spot
+    - uses: ncipollo/release-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
-        asset_path: ./Einstein.zip
-        asset_name: Einstein_linux_i386_fltk_${{github.event.inputs.version_tag}}.zip
-        asset_content_type: application/zip
+        allowUpdates: 'true'
+        artifacts: 'spot_linux.zip'
+        artifactContentType: application/zip
+        body: testing
+        tag: 'v${{ github.event.inputs.version_tag }}'
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-windows-x64-fltk:
+  build-windows:
     runs-on: windows-latest
-    if: ${{ github.event.inputs.build-windows-x64-fltk == 'true' }}
+    if: ${{ github.event.inputs.build-windows == 'true' }}
     steps:
     - name: Get sources
       uses: actions/checkout@v2
-    - name: Get FLTK
-      uses: actions/checkout@v2
-      with:
-        repository: fltk/fltk
-        path: fltk
-    - name: Get newt64
-      uses: actions/checkout@v2
-      with:
-        repository: MatthiasWM/NEWT64
-        path: newt64
-    - name: Compile FLTK
-      run: |
-        cmake -G "Visual Studio 16 2019" -S fltk -B fltk/build -A x64 -D OPTION_USE_SYSTEM_LIBJPEG=Off -D OPTION_USE_SYSTEM_ZLIB=Off -D OPTION_USE_SYSTEM_LIBPNG=Off -D FLTK_BUILD_TEST=Off -D OPTION_USE_GL=Off
-        cmake --build fltk/build --config Release
-    - name: Compile newt64
-      run: |
-        cmake -G "Visual Studio 16 2019" -S newt64 -B newt64/build -A x64
-        cmake --build newt64/build --config Release
     - name: Compile Einstein
       run: |
-        cmake -G "Visual Studio 16 2019" -S . -B build -A x64
-        cmake --build build --config Release --target Einstein
+        cmake -G "Visual Studio 16 2019" -S . -B build
+        cmake --build build --config Release
     - name: Pack Einstein
       run: |
-        mv build/Release/Einstein.exe .
-        cmake -E tar cf Einstein.zip --format=zip Einstein.exe
-    - uses: actions/upload-release-asset@v1.0.1
+        mv build/Release/spot.exe .
+        cmake -E tar cf spot_windows.zip --format=zip spot.exe
+    - uses: ncipollo/release-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
-        asset_path: ./Einstein.zip
-        asset_name: Einstein_windows_x64_fltk_${{github.event.inputs.version_tag}}.zip
-        asset_content_type: application/zip
-    - uses: eregon/publish-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        release_id: ${{ steps.create_release.outputs.id }}
+        allowUpdates: 'true'
+        artifacts: 'spot_linux.zip'
+        artifactContentType: application/zip
+        body: testing
+        tag: 'v${{ github.event.inputs.version_tag }}'
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-macos-universal-cocoa:
-    runs-on: macos-latest
-    if: ${{ github.event.inputs.build-macos-universal-cocoa == 'true' }}
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: |
-        xcodebuild archive \
-          -project _Build_/Xcode/Einstein.xcodeproj \
-          -scheme Einstein -configuration Release \
-          -archivePath Einstein.xcarchive \
-          ONLY_ACTIVE_ARCH=NO
-    - name: Pack Einstein
-      run: |
-        mv Einstein.xcarchive/Products/Applications/Einstein.app .
-        cmake -E tar cf Einstein.zip --format=zip Einstein.app
-        echo "https://github.com/"${{github.repository}}"/releases/tag/"${{github.event.inputs.version_tag}}
-    - uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        # https://github.com/MatthiasWM/Einstein/releases/tag/2022.4.15.4
-        upload_url: 'https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version_tag }}'
-        asset_path: ./Einstein.zip
-        asset_name: Einstein_windows_x64_fltk_${{github.event.inputs.version_tag}}.zip
-        asset_content_type: application/zip
-    - uses: eregon/publish-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        release_id: ${{ steps.create_release.outputs.id }}
