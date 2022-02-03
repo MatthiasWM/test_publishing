@@ -59,11 +59,11 @@ jobs:
     runs-on: macos-latest
     if: ${{ github.event.inputs.build-macos == 'true' }}
     steps:
+    - name: Get sources
+      uses: actions/checkout@v2
     - name: Get Version
       run: |
         grep -o 'VERSION "[^"]*' CMakeLists.txt  | grep -o '[^"]*$' >> $RELEASE_TAG
-    - name: Get sources
-      uses: actions/checkout@v2
     - name: Compile Einstein
       run: |
         cmake -S . -B build \
