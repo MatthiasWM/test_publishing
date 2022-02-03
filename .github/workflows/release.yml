@@ -127,7 +127,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         allowUpdates: 'true'
-        artifacts: 'spot_linux.zip'
+        artifacts: 'spot_windows.zip'
         artifactContentType: application/zip
         body: testing
         tag: 'v${{ github.event.inputs.version_tag }}'
