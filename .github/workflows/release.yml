@@ -126,9 +126,9 @@ jobs:
     - name: Get sources
       uses: actions/checkout@v2
     - name: Get Version
-      shell: PowerShell
+      shell: pwsh
       run: |
-        Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"Einstein" VERSION'
+        Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"spot" VERSION'
         $env:RELEASE_TAG2=(Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"Einstein" VERSION')
         gci env:RELEASE_TAG2
         $env:RELEASE_TAG=($env:RELEASE_TAG2 -replace '.* VERSION "', '' -replace '".*\)', '')
