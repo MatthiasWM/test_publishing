@@ -64,6 +64,7 @@ jobs:
     - name: Get Version
       run: |
         export RELEASE_TAG="v"`grep -o 'VERSION "[^"]*' CMakeLists.txt  | grep -o '[^"]*$'`
+        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
     - name: Compile Einstein
       run: |
         cmake -S . -B build \
@@ -95,6 +96,7 @@ jobs:
     - name: Get Version
       run: |
         export RELEASE_TAG="v"`grep -o 'VERSION "[^"]*' CMakeLists.txt  | grep -o '[^"]*$'`
+        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
     - name: Compile Einstein
       run: |
         cmake -S . -B build \
@@ -125,6 +127,7 @@ jobs:
       run: |
         $env:RELEASE_TAG2=(Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"Einstein" VERSION')
         $env:RELEASE_TAG=($RELEASE_TAG2 -replace '.* VERSION "', '' -replace '".*\)', '')
+        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
         # findstr /r "\"Einstein\".VERSION.\".*\"" CMakeLists.txt >> tmp
         # set /P RELEASE_TAG_2= <tmp
         # set RELEASE_TAG_1=%RELEASE_TAG_2:*VERSION "=%
