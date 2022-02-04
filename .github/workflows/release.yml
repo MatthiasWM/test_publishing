@@ -126,6 +126,7 @@ jobs:
     - name: Get sources
       uses: actions/checkout@v2
     - name: Get Version
+      shell: pwsh
       run: |
         $env:RELEASE_TAG2=(Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"Einstein" VERSION')
         $env:RELEASE_TAG=($RELEASE_TAG2 -replace '.* VERSION "', '' -replace '".*\)', '')
@@ -144,8 +145,8 @@ jobs:
         mv build/Release/spot.exe .
         cmake -E tar cf spot_windows.zip --format=zip spot.exe
     - uses: ncipollo/release-action@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # env:
+      #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         allowUpdates: 'true'
         # prerelease:
