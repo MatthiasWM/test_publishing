@@ -129,9 +129,9 @@ jobs:
       shell: pwsh
       run: |
         $env:RELEASE_TAG2=(Select-String -Path CMakeLists.txt -CaseSensitive -Pattern '"Einstein" VERSION')
-        $env:RELEASE_TAG=($RELEASE_TAG2 -replace '.* VERSION "', '' -replace '".*\)', '')
-        echo "RELEASE_TAG=v$RELEASE_TAG"
-        echo "RELEASE_TAG=v$RELEASE_TAG" >> $GITHUB_ENV
+        $env:RELEASE_TAG=($env:RELEASE_TAG2 -replace '.* VERSION "', '' -replace '".*\)', '')
+        echo "RELEASE_TAG=v$env:RELEASE_TAG"
+        echo "RELEASE_TAG=v$env:RELEASE_TAG" >> $env:GITHUB_ENV
         # findstr /r "\"Einstein\".VERSION.\".*\"" CMakeLists.txt >> tmp
         # set /P RELEASE_TAG_2= <tmp
         # set RELEASE_TAG_1=%RELEASE_TAG_2:*VERSION "=%
